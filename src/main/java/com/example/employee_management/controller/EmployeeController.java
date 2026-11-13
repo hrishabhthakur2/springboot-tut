@@ -2,6 +2,8 @@
 package com.example.employee_management.controller;
 
 import com.example.employee_management.model.Employee;
+import com.example.employee_management.dto.EmployeeRequest;
+import com.example.employee_management.dto.EmployeeResponse;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,11 +15,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -57,20 +61,38 @@ public class EmployeeController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping 
-    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee){
-        
+    
+    @PostMapping
+    public ResponseEntity<EmployeeResponse> createEmployee(
+            @Valid @RequestBody EmployeeRequest request) {
+
         long newId = employees.stream()
                 .mapToLong(Employee::getId)
                 .max()
                 .orElse(0L) + 1;
-        
-        employee.setId(newId);
+
+        Employee employee = new Employee(
+                newId,
+                request.getName(),
+                request.getEmail(),
+                request.getDepartment(),
+                request.getSalary()
+        );
 
         employees.add(employee);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(employee);
+        EmployeeResponse response = new EmployeeResponse(
+                employee.getId(),
+                employee.getName(),
+                employee.getEmail(),
+                employee.getDepartment(),
+                employee.getSalary()
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(response);
     }
+
 
     @PutMapping("/{id}") 
     public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody Employee updatedEmployee){
@@ -138,5 +160,13 @@ public class EmployeeController {
         employees.remove(employee);
 
         return ResponseEntity.ok(employee);
+    }
+
+    @GetMapping("/search")
+    public List<Employee> searchEmployees(@RequestParam String department){
+
+        return employees.stream()
+                .filter(employee -> employee.getDepartment().equalsIgnoreCase(department))
+                .toList();
     }
 }
